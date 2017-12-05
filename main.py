@@ -20,7 +20,6 @@ def main():
     gen = Generator(n_units)
     dis = Discriminator(n_units)
     iterator = RandomIterator(train_data, batch_size=batch_size)
-    tester = RandomIterator(test_data, batch_size=batch_size)
     g_optimizer = optimizers.SGD()
     g_optimizer.setup(gen)
     d_optimizer = optimizers.SGD()
