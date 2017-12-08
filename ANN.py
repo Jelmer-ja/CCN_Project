@@ -11,22 +11,21 @@ class Generator(Chain):
             # # the size of the inputs to each layer will be inferred
             # TODO: pad = ???
             # Original l2 size = 1024
-            self.l1 = L.Linear(None,out_size=4 ** 2)  # n_in -> n_units        INPUT LAYER
-            self.l3 = L.Deconvolution2D(in_channels=1024, out_channels=512, ksize=1, stride=2, pad=1,outsize=(4,4))  # DECONVOLUTION
+            self.l3 = L.Deconvolution2D(in_channels=128, out_channels=512, ksize=1, stride=2, pad=1,outsize=(4,4))  # DECONVOLUTION
             self.l4 = L.BatchNormalization(512 * 8 ** 2)  # n_units -> n_out       BATCH NORMALIZATION
-            self.l5 = L.Deconvolution2D(in_channels=512, out_channels=256, ksize=5, stride=2, pad=1,outsize=(8,8))  # DECONVOLUTION
+            self.l5 = L.Deconvolution2D(in_channels=64, out_channels=256, ksize=5, stride=2, pad=1,outsize=(8,8))  # DECONVOLUTION
             self.l6 = L.BatchNormalization(256 * 16 ** 2)  # n_units -> n_out       BATCH NORMALIZATION
-            self.l7 = L.Deconvolution2D(in_channels=256, out_channels=128, ksize=5, stride=2, pad=1,outsize=(16,16))  # DECONVOLUTION
+            self.l7 = L.Deconvolution2D(in_channels=32, out_channels=128, ksize=5, stride=2, pad=1,outsize=(16,16))  # DECONVOLUTION
             self.l8 = L.BatchNormalization(128 * 28 ** 2)  # n_units -> n_out       BATCH NORMALIZATION
-            self.l9 = L.Deconvolution2D(in_channels=128, out_channels=1, ksize=5, stride=2, pad=1,outsize=(32,32))  # DECONVOLUTION
+            self.l9 = L.Deconvolution2D(in_channels=16, out_channels=1, ksize=5, stride=2, pad=1,outsize=(32,32))  # DECONVOLUTION
 
             #self.l10 = L.BatchNormalization(3 * 64 ** 2)  # n_units -> n_out       BATCH NORMALIZATION
             #self.l11 = L.Deconvolution2D(in_channels=3, out_channels=1, ksize=5, stride=2, pad=1,outsize=(64,64))  # DECONVOLUTION
 
     def __call__(self, x):
         # Reshape image
-        h1 = F.relu(self.l1(x))
-        h3 = F.relu(self.l3(h1))
+        #h1 = F.relu(self.l1(x))
+        h3 = F.relu(self.l3(x))
         h4 = F.relu(self.l4(h3))
         h5 = F.relu(self.l5(h4))
         h6 = F.relu(self.l6(h5))

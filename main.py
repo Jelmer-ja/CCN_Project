@@ -14,6 +14,7 @@ from utils import *
 
 def main():
     epoch = 100
+    noise_size = 128
     train_data, test_data = get_mnist(n_train=1000,n_test=100,with_label=False,classes=[0])
     batch_size = 32
     gen = Generator()
@@ -23,11 +24,11 @@ def main():
     g_optimizer.setup(gen)
     d_optimizer = optimizers.SGD()
     d_optimizer.setup(dis)
-    loss = run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer)
-    showImages(gen,batch_size)
+    loss = run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer,noise_size)
+    showImages(gen,batch_size,noise_size)
     plot_loss(loss,epoch)
 
-def run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer):
+def run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer,noise_size):
     losses = [[],[]]
     for i in range(0,epoch):
         #for j in range (0,batch_size) THEY USED K=1 IN THE PAPER SO SO DO WE
@@ -36,7 +37,7 @@ def run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer):
         for batch in iterator:
             k += 1
             dis.cleargrads(); gen.cleargrads()
-            noise = randomsample(100)
+            noise = randomsample(noise_size)
             g_sample = gen(noise)
             disc_gen = dis(g_sample)
             disc_data = dis(np.reshape(batch,(batch_size,1,28,28),order='F'))
@@ -49,7 +50,7 @@ def run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer):
             if(k >= 1):
                 break
 
-        noise = randomsample(100)
+        noise = randomsample(noise_size)
         gn = gen(noise)
         if(i % 50 == 0):
             plt.imshow(np.reshape(gn[0].data[:, ], (28, 28), order='F'))
@@ -61,7 +62,7 @@ def run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer):
     return losses
 
 def randomsample(size):
-    return np.random.uniform(-1.0,1.0,[size,size]).astype('float32')
+    return np.random.uniform(-1.0,1.0,[size,size,size,size]).astype('float32')
 
 def plot_loss(loss,epoch):
     plt.plot(np.array(range(1, epoch + 1)), np.array(loss[0]), label='Discriminator Loss')
@@ -69,9 +70,9 @@ def plot_loss(loss,epoch):
     plt.legend()
     plt.show()
 
-def showImages(gen,batch_size):
+def showImages(gen,batch_size,noise_size):
     batch_size = 1
-    noise = randomsample(100)
+    noise = randomsample(noise_size)
     images = gen(noise)
     for i in images:
         plt.imshow(np.reshape(i.data[:,], (28, 28), order='F'))
