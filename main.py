@@ -16,19 +16,18 @@ def main():
     epoch = 100
     train_data, test_data = get_mnist(n_train=1000,n_test=100,with_label=False,classes=[0])
     batch_size = 32
-    n_units = 10
-    gen = Generator(n_units)
-    dis = Discriminator(n_units)
+    gen = Generator()
+    dis = Discriminator()
     iterator = RandomIterator(train_data, batch_size=batch_size)
     g_optimizer = optimizers.SGD()
     g_optimizer.setup(gen)
     d_optimizer = optimizers.SGD()
     d_optimizer.setup(dis)
-    loss = run_network(epoch,batch_size,gen,dis,iterator,n_units,g_optimizer,d_optimizer)
+    loss = run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer)
     showImages(gen,batch_size)
     plot_loss(loss,epoch)
 
-def run_network(epoch,batch_size,gen,dis,iterator,n_units,g_optimizer,d_optimizer):
+def run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer):
     losses = [[],[]]
     for i in range(0,epoch):
         #for j in range (0,batch_size) THEY USED K=1 IN THE PAPER SO SO DO WE
@@ -37,7 +36,7 @@ def run_network(epoch,batch_size,gen,dis,iterator,n_units,g_optimizer,d_optimize
         for batch in iterator:
             k += 1
             dis.cleargrads(); gen.cleargrads()
-            noise = randomsample(784,batch_size)
+            noise = randomsample(100)
             g_sample = gen(noise)
             disc_gen = dis(g_sample)
             disc_data = dis(np.reshape(batch,(batch_size,1,28,28),order='F'))
@@ -50,7 +49,7 @@ def run_network(epoch,batch_size,gen,dis,iterator,n_units,g_optimizer,d_optimize
             if(k >= 1):
                 break
 
-        noise = randomsample(784, batch_size)
+        noise = randomsample(100)
         gn = gen(noise)
         if(i % 50 == 0):
             plt.imshow(np.reshape(gn[0].data[:, ], (28, 28), order='F'))
@@ -61,8 +60,8 @@ def run_network(epoch,batch_size,gen,dis,iterator,n_units,g_optimizer,d_optimize
         losses[1].append(loss.data)
     return losses
 
-def randomsample(size,batch_size):
-    return np.random.uniform(-1.0,1.0,[batch_size,size]).astype('float32')
+def randomsample(size):
+    return np.random.uniform(-1.0,1.0,[size,size]).astype('float32')
 
 def plot_loss(loss,epoch):
     plt.plot(np.array(range(1, epoch + 1)), np.array(loss[0]), label='Discriminator Loss')
@@ -72,7 +71,7 @@ def plot_loss(loss,epoch):
 
 def showImages(gen,batch_size):
     batch_size = 1
-    noise = randomsample(784, batch_size)
+    noise = randomsample(100)
     images = gen(noise)
     for i in images:
         plt.imshow(np.reshape(i.data[:,], (28, 28), order='F'))
