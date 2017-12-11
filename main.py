@@ -37,12 +37,12 @@ def run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer,noise_
         for batch in iterator:
             k += 1
             dis.cleargrads(); gen.cleargrads()
-            noise = randomsample(noise_size)
+            noise = randomsample(noise_size, batch_size)
             g_sample = gen(noise)
             disc_gen = dis(g_sample)
             disc_data = dis(np.reshape(batch,(batch_size,1,28,28),order='F'))
-            softmax1 = F.sigmoid_cross_entropy(disc_gen,np.zeros(batch_size).astype('int32'))
-            softmax2 = F.sigmoid_cross_entropy(disc_data,np.ones(batch_size).astype('int32'))
+            softmax1 = F.sigmoid_cross_entropy(disc_gen,np.zeros((batch_size,1)).astype('int32'))
+            softmax2 = F.sigmoid_cross_entropy(disc_data,np.ones((batch_size,1)).astype('int32'))
             loss = softmax1 + softmax2
             loss.backward()
             d_optimizer.update()
@@ -50,19 +50,16 @@ def run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer,noise_
             if(k >= 1):
                 break
 
-        noise = randomsample(noise_size)
+        noise = randomsample(noise_size, batch_size)
         gn = gen(noise)
-        if(i % 50 == 0):
-            plt.imshow(np.reshape(gn[0].data[:, ], (28, 28), order='F'))
-            plt.show()
-        loss = F.sigmoid_cross_entropy(dis(gn),np.ones(batch_size).astype('int32'))
+        loss = F.sigmoid_cross_entropy(dis(gn),np.ones((batch_size,1)).astype('int32'))
         loss.backward()
         g_optimizer.update()
         losses[1].append(loss.data)
     return losses
 
-def randomsample(size):
-    return np.random.uniform(-1.0,1.0,[size,size,size,size]).astype('float32')
+def randomsample(size, batch_size):
+    return np.random.uniform(-1, 1, (batch_size, 100, 1, 1)).astype(np.float32)
 
 def plot_loss(loss,epoch):
     plt.plot(np.array(range(1, epoch + 1)), np.array(loss[0]), label='Discriminator Loss')
@@ -72,10 +69,10 @@ def plot_loss(loss,epoch):
 
 def showImages(gen,batch_size,noise_size):
     batch_size = 1
-    noise = randomsample(noise_size)
+    noise = randomsample(noise_size, batch_size)
     images = gen(noise)
     for i in images:
-        plt.imshow(np.reshape(i.data[:,], (28, 28), order='F'))
+        plt.imshow(np.reshape(i.data[:,], (19, 19), order='F'))
         plt.show()
 
 if(__name__ == "__main__"):
