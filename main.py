@@ -26,16 +26,15 @@ def main():
     d_optimizer.setup(dis)
     loss = run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer,noise_size)
     showImages(gen,batch_size,noise_size)
-    plot_loss(loss,epoch)
+    plot_loss(loss,epoch,batch_size)
 
 def run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer,noise_size):
     losses = [[],[]]
     for i in range(0,epoch):
         #for j in range (0,batch_size) THEY USED K=1 IN THE PAPER SO SO DO WE
         k = 0
-
+        print(i)
         for batch in iterator:
-            k += 1
             dis.cleargrads(); gen.cleargrads()
             noise = randomsample(noise_size, batch_size)
             g_sample = gen(noise)
@@ -47,7 +46,8 @@ def run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer,noise_
             loss.backward()
             d_optimizer.update()
             losses[0].append(loss.data)
-            if(k >= 1):
+            k += 1
+            if(k >= 3):
                 break
 
         noise = randomsample(noise_size, batch_size)
@@ -61,9 +61,9 @@ def run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer,noise_
 def randomsample(size, batch_size):
     return np.random.uniform(-1, 1, (batch_size, 100, 1, 1)).astype(np.float32)
 
-def plot_loss(loss,epoch):
-    plt.plot(np.array(range(1, epoch + 1)), np.array(loss[0]), label='Discriminator Loss')
-    plt.plot(np.array(range(1, epoch + 1)), np.array(loss[1]), label='Generator Loss')
+def plot_loss(loss,epoch,batch_size):
+    plt.plot(np.array(range(0, epoch)), np.array(loss[0]), label='Discriminator Loss')
+    plt.plot(np.array(range(0, epoch)), np.array(loss[1]), label='Generator Loss')
     plt.legend()
     plt.show()
 
@@ -72,7 +72,7 @@ def showImages(gen,batch_size,noise_size):
     noise = randomsample(noise_size, batch_size)
     images = gen(noise)
     for i in images:
-        plt.imshow(np.reshape(i.data[:,], (19, 19), order='F'))
+        plt.imshow(np.reshape(i.data[:,], (28, 28), order='F'))
         plt.show()
 
 if(__name__ == "__main__"):

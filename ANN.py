@@ -18,7 +18,7 @@ class Generator(Chain):
             self.l6 = L.BatchNormalization(self.ch / 4)  # n_units -> n_out       BATCH NORMALIZATION
             self.l7 = L.Deconvolution2D(in_channels=self.ch / 4, out_channels=self.ch / 8, ksize=2, stride=2, pad=1)  # DECONVOLUTION
             self.l8 = L.BatchNormalization(self.ch / 8)  # n_units -> n_out       BATCH NORMALIZATION
-            self.l9 = L.Deconvolution2D(in_channels=self.ch / 8, out_channels=1, ksize=3, stride=2, pad=1)  # DECONVOLUTION
+            self.l9 = L.Deconvolution2D(in_channels=self.ch / 8, out_channels=1, ksize=3, stride=3, pad=1)  # DECONVOLUTION
 
             #self.l10 = L.BatchNormalization(3 * 64 ** 2)  # n_units -> n_out       BATCH NORMALIZATION
             #self.l11 = L.Deconvolution2D(in_channels=3, out_channels=1, ksize=5, stride=2, pad=1,outsize=(64,64))  # DECONVOLUTION
@@ -54,11 +54,11 @@ class Discriminator(Chain):
             self.l6 = L.Linear(None, 1)    # n_units -> n_out
 
     def __call__(self, x):
-        h = self.l2(x)
-        h = self.l3a(self.l3(h))
-        h = self.l4a(self.l4(h))
-        h = self.l5a(self.l5(h))
-        y = F.relu(self.l6(h))
+        h = F.leaky_relu(self.l2(x))
+        h = F.leaky_relu(self.l3a(self.l3(h)))
+        h = F.leaky_relu(self.l4a(self.l4(h)))
+        h = F.leaky_relu(self.l5a(self.l5(h)))
+        y = self.l6(h)
         return y
 
 class GeneratorDistribution(object):
