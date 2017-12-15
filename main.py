@@ -14,51 +14,53 @@ from utils import *
 
 def main():
     epoch = 100
-    noise_size = 128
     train_data, test_data = get_mnist(n_train=1000,n_test=100,with_label=False,classes=[0])
     batch_size = 32
     gen = Generator()
     dis = Discriminator()
-    iterator = RandomIterator(train_data, batch_size=batch_size)
+    iterator = iterators.SerialIterator(train_data, batch_size=batch_size)
     g_optimizer = optimizers.SGD()
     g_optimizer.setup(gen)
     d_optimizer = optimizers.SGD()
     d_optimizer.setup(dis)
-    loss = run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer,noise_size)
-    showImages(gen,batch_size,noise_size)
+    loss = run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer)
+    showImages(gen,batch_size)
     plot_loss(loss,epoch,batch_size)
 
-def run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer,noise_size):
+def run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer):
     losses = [[],[]]
-    for i in range(0,epoch):
-        #for j in range (0,batch_size) THEY USED K=1 IN THE PAPER SO SO DO WE
-        k = 0
+    for i in range(0, epoch):
+        # for j in range (0,batch_size) THEY USED K=1 IN THE PAPER SO SO DO WE
         print(i)
-        for batch in iterator:
-            dis.cleargrads(); gen.cleargrads()
-            noise = randomsample(noise_size, batch_size)
-            g_sample = gen(noise)
-            disc_gen = dis(g_sample)
-            disc_data = dis(np.reshape(batch,(batch_size,1,28,28),order='F'))
-            softmax1 = F.sigmoid_cross_entropy(disc_gen,np.zeros((batch_size,1)).astype('int32'))
-            softmax2 = F.sigmoid_cross_entropy(disc_data,np.ones((batch_size,1)).astype('int32'))
-            loss = softmax1 + softmax2
-            loss.backward()
-            d_optimizer.update()
-            losses[0].append(loss.data)
-            k += 1
-            if(k >= 3):
-                break
 
-        noise = randomsample(noise_size, batch_size)
-        gn = gen(noise)
-        loss = F.sigmoid_cross_entropy(dis(gn),np.ones((batch_size,1)).astype('int32'))
+        batch = iterator.next()
+        dis.cleargrads()
+        gen.cleargrads()
+        noise = randomsample(batch_size)
+        g_sample = gen(noise)
+        disc_gen = dis(g_sample)
+        disc_data = dis(np.reshape(batch, (batch_size, 1, 28, 28), order='F'))
+        #softmax1 = F.sigmoid_cross_entropy(disc_gen, np.zeros((batch_size, 1)).astype('int32'))
+        #softmax2 = F.sigmoid_cross_entropy(disc_data, np.ones((batch_size, 1)).astype('int32'))
+        #loss = softmax1 + softmax2
+        L1 = F.sum(F.softplus(-disc_data)) / batch_size
+        L2 = F.sum(F.softplus(disc_gen)) / batch_size
+        loss = L1 + L2
         loss.backward()
+        d_optimizer.update()
+        losses[0].append(loss.data)
+
+        noise = randomsample(batch_size)
+        gn = gen(noise)
+        #gloss = F.sigmoid_cross_entropy(dis(gn), np.ones((batch_size, 1)).astype('int32'))
+        #gloss.backward()
+        gloss = F.sum(F.softplus(-gn)) / batch_size
+        gloss.backward()
         g_optimizer.update()
-        losses[1].append(loss.data)
+        losses[1].append(gloss.data)
     return losses
 
-def randomsample(size, batch_size):
+def randomsample(batch_size):
     return np.random.uniform(-1, 1, (batch_size, 100, 1, 1)).astype(np.float32)
 
 def plot_loss(loss,epoch,batch_size):
@@ -67,9 +69,9 @@ def plot_loss(loss,epoch,batch_size):
     plt.legend()
     plt.show()
 
-def showImages(gen,batch_size,noise_size):
+def showImages(gen,batch_size):
     batch_size = 1
-    noise = randomsample(noise_size, batch_size)
+    noise = randomsample(batch_size)
     images = gen(noise)
     for i in images:
         plt.imshow(np.reshape(i.data[:,], (28, 28), order='F'))
