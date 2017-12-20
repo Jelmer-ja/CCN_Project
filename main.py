@@ -13,7 +13,7 @@ from ANN import *
 from utils import *
 
 def main():
-    epoch = 100
+    epoch = 50
     train_data, test_data = get_mnist(n_train=1000,n_test=100,with_label=False,classes=[0])
     batch_size = 32
     gen = Generator()
@@ -40,11 +40,11 @@ def run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer):
         g_sample = gen(noise)
         disc_gen = dis(g_sample)
         disc_data = dis(np.reshape(batch, (batch_size, 1, 28, 28), order='F'))
-        #softmax1 = F.sigmoid_cross_entropy(disc_gen, np.zeros((batch_size, 1)).astype('int32'))
-        #softmax2 = F.sigmoid_cross_entropy(disc_data, np.ones((batch_size, 1)).astype('int32'))
+        L1 = F.sigmoid_cross_entropy(disc_gen, np.zeros((batch_size, 1)).astype('int32'))
+        L2 = F.sigmoid_cross_entropy(disc_data, np.ones((batch_size, 1)).astype('int32'))
         #loss = softmax1 + softmax2
-        L1 = F.sum(F.softplus(-disc_data)) / batch_size
-        L2 = F.sum(F.softplus(disc_gen)) / batch_size
+        #L1 = F.sum(F.softplus(disc_data)) / batch_size
+        #L2 = F.sum(F.softplus(-disc_gen)) / batch_size
         loss = L1 + L2
         loss.backward()
         d_optimizer.update()
@@ -52,9 +52,9 @@ def run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer):
 
         noise = randomsample(batch_size)
         gn = gen(noise)
-        #gloss = F.sigmoid_cross_entropy(dis(gn), np.ones((batch_size, 1)).astype('int32'))
+        gloss = F.sigmoid_cross_entropy(dis(gn), np.ones((batch_size, 1)).astype('int32'))
         #gloss.backward()
-        gloss = F.sum(F.softplus(-gn)) / batch_size
+        #gloss = F.sum(F.softplus(gn)) / batch_size
         gloss.backward()
         g_optimizer.update()
         losses[1].append(gloss.data)
