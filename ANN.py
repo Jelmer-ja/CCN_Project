@@ -31,7 +31,7 @@ class Generator(Chain):
         h3 = F.relu(self.l4(self.l3(h22)))
         h5 = F.relu(self.l6(self.l5(h3)))
         h7 = F.relu(self.l8(self.l7(h5)))
-        y = F.sigmoid(self.l9(h7))
+        y = F.tanh(self.l9(h7))
         #h10 = F.relu(self.l10(h9))
         #y = F.tanh(self.l11(h10))
         return y
@@ -58,7 +58,7 @@ class Discriminator(Chain):
         h = F.leaky_relu(self.l3a(self.l3(h)))
         h = F.leaky_relu(self.l4a(self.l4(h)))
         h = F.leaky_relu(self.l5a(self.l5(h)))
-        y = self.l6(h)
+        y = F.sigmoid(self.l6(h))
         return y
 
 class GeneratorDistribution(object):

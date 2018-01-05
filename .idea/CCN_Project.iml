@@ -4,6 +4,10 @@
     <content url="file://$MODULE_DIR$" />
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module" module-name="Chainer-DCGAN-MNIST" />
+    <orderEntry type="module" module-name="chainer-DCGAN" />
+    <orderEntry type="module" module-name="chainer-gan-improvements" />
+    <orderEntry type="module" module-name="TextClassifiction" />
   </component>
   <component name="TestRunnerService">
     <option name="projectConfiguration" value="Nosetests" />

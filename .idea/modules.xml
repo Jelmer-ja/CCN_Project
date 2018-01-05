@@ -3,6 +3,8 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/CCN_Project.iml" filepath="$PROJECT_DIR$/.idea/CCN_Project.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../TextClassifiction/.idea/TextClassifiction.iml" filepath="$PROJECT_DIR$/../TextClassifiction/.idea/TextClassifiction.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../chainer-gan-improvements/.idea/chainer-gan-improvements.iml" filepath="$PROJECT_DIR$/../chainer-gan-improvements/.idea/chainer-gan-improvements.iml" />
     </modules>
   </component>
 </project>

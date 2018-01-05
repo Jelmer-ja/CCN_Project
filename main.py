@@ -1,7 +1,7 @@
 import numpy as np
 import chainer
 from chainer import cuda, Function, gradient_check, report, training, utils, Variable
-from chainer import datasets, iterators, optimizers, serializers
+from chainer import datasets, iterators, optimizers, serializers, training
 from chainer import Link, Chain, ChainList
 from chainer.training import extensions
 import chainer.functions as F
@@ -13,15 +13,15 @@ from ANN import *
 from utils import *
 
 def main():
-    epoch = 50
+    epoch = 100
     train_data, test_data = get_mnist(n_train=1000,n_test=100,with_label=False,classes=[0])
     batch_size = 32
     gen = Generator()
     dis = Discriminator()
     iterator = iterators.SerialIterator(train_data, batch_size=batch_size)
-    g_optimizer = optimizers.SGD()
+    g_optimizer = optimizers.MomentumSGD(0.02)
     g_optimizer.setup(gen)
-    d_optimizer = optimizers.SGD()
+    d_optimizer = optimizers.MomentumSGD(0.01)
     d_optimizer.setup(dis)
     loss = run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer)
     showImages(gen,batch_size)
@@ -42,7 +42,6 @@ def run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer):
         disc_data = dis(np.reshape(batch, (batch_size, 1, 28, 28), order='F'))
         L1 = F.sigmoid_cross_entropy(disc_gen, np.zeros((batch_size, 1)).astype('int32'))
         L2 = F.sigmoid_cross_entropy(disc_data, np.ones((batch_size, 1)).astype('int32'))
-        #loss = softmax1 + softmax2
         #L1 = F.sum(F.softplus(disc_data)) / batch_size
         #L2 = F.sum(F.softplus(-disc_gen)) / batch_size
         loss = L1 + L2
@@ -53,7 +52,6 @@ def run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer):
         noise = randomsample(batch_size)
         gn = gen(noise)
         gloss = F.sigmoid_cross_entropy(dis(gn), np.ones((batch_size, 1)).astype('int32'))
-        #gloss.backward()
         #gloss = F.sum(F.softplus(gn)) / batch_size
         gloss.backward()
         g_optimizer.update()
