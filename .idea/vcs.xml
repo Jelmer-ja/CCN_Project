@@ -3,7 +3,6 @@
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/../TextClassifiction" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/../chainer-DCGAN" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/../chainer-gan-improvements" vcs="Git" />
   </component>
 </project>
