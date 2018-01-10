@@ -15,13 +15,11 @@ from utils import *
 def main():
     epoch = 100
     train_data, test_data = get_mnist(n_train=1000,n_test=100,with_label=False,classes=[0])
-    #train = datasets.get_mnist(withlabel=False, ndim=2)
-
     batch_size = 32
-    gen = Generator(10,(32,32))
-    dis = Discriminator((32,32))
+    gen = Generator()
+    dis = Discriminator()
     iterator = iterators.SerialIterator(train_data, batch_size=batch_size)
-    g_optimizer = optimizers.MomentumSGD(0.01)
+    g_optimizer = optimizers.MomentumSGD(0.02)
     g_optimizer.setup(gen)
     d_optimizer = optimizers.MomentumSGD(0.01)
     d_optimizer.setup(dis)
@@ -61,7 +59,7 @@ def run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer):
     return losses
 
 def randomsample(batch_size):
-    return np.random.uniform(-1, 1, (batch_size, 10, 1, 1)).astype(np.float32)
+    return np.random.uniform(-1, 1, (batch_size, 100, 1, 1)).astype(np.float32)
 
 def plot_loss(loss,epoch,batch_size):
     plt.plot(np.array(range(0, epoch)), np.array(loss[0]), label='Discriminator Loss')
