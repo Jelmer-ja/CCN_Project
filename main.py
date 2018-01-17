@@ -9,16 +9,24 @@ import chainer.links as L
 import matplotlib.pyplot as plt
 import math
 import random
+from scipy import misc
+import glob
 from ANN import *
 from utils import *
 
 def main():
-    epoch = 3
-    train_data, test_data = get_mnist(n_train=1000,n_test=100,with_label=False,classes=[0])
+    epoch = 20
+    #train_data, test_data = get_mnist(n_train=1000,n_test=100,with_label=False,classes=[0])
+    cats = getCats()
+    cats = grayscale(cats)
+    data = np.asarray(cats[0:1000])
+    train_data = chainer.datasets.TupleDataset(data,np.asarray(range(0,1000)))
+    #showtrain(train_data)
+    #test_data = cats[1000:1100]
     batch_size = 32
     gen = Generator()
     dis = Discriminator()
-    iterator = iterators.SerialIterator(train_data, batch_size=batch_size)
+    iterator = RandomIterator(train_data,batch_size) #iterators.SerialIterator(train_data, batch_size=batch_size)
     g_optimizer = optimizers.Adam()
     g_optimizer.setup(gen)
     d_optimizer = optimizers.Adam()
@@ -29,58 +37,37 @@ def main():
 
 def run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer):
     losses = [[],[]]
-    for i in range(0, epoch):
-        # for j in range (0,batch_size) THEY USED K=1 IN THE PAPER SO SO DO WE
-        print(i)
+    for i in range(0,epoch):
+        #for j in range (0,batch_size) THEY USED K=1 IN THE PAPER SO SO DO WE
+        dloss_all = 0
+        gloss_all = 0
+        with chainer.using_config('train', True):
+            j = 0
+            for batch in iterator:
+                print j
+                dis.cleargrads(); gen.cleargrads()
+                noise = randomsample(batch_size)
+                g_sample = gen(noise)
+                disc_gen = dis(g_sample)
+                print(len(batch))
+                print(len(batch[0]))
+                disc_data = dis(np.reshape(batch, (batch_size, 1, 28, 28), order='F'))
+                softmax1 = F.sigmoid_cross_entropy(disc_gen,np.zeros((batch_size,1)).astype('int32'))
+                softmax2 = F.sigmoid_cross_entropy(disc_data,np.ones((batch_size,1)).astype('int32'))
+                loss = softmax1 + softmax2
+                loss.backward()
+                d_optimizer.update()
 
-        #always start epoch loss at zero
-        gloss_epoch = np.float32(0)
-        dloss_epoch = np.float32(0)
+                gloss = F.sigmoid_cross_entropy(disc_gen,np.ones((batch_size,1)).astype('int32'))
+                gloss.backward()
+                g_optimizer.update()
 
-        for j in range(0, 1000, batch_size):
-            batch = iterator.next()
-            noise = randomsample(batch_size)
-            g_sample = gen(noise)
-
-            disc_gen = dis(g_sample) # others call this y_fake
-            disc_data = dis(np.reshape(batch, (batch_size, 1, 28, 28), order='F')) # others call this y_real
-
-            L1 = F.sigmoid_cross_entropy(disc_gen, np.zeros((batch_size, 1)).astype('int32')) # compare y_fake to zeros
-            L2 = F.sigmoid_cross_entropy(disc_data, np.ones((batch_size, 1)).astype('int32')) # compare y_real to ones
-            #L1 = F.sum(F.softplus(disc_data)) / batch_size
-            #L2 = F.sum(F.softplus(-disc_gen)) / batch_size
-            dloss = L1 + L2
-            dloss/= 2
-            #losses[0].append(dloss.data)
-
-            #noise = randomsample(batch_size)
-            #gn = gen(noise)
-            gloss = F.sigmoid_cross_entropy(disc_gen, np.ones((batch_size, 1)).astype('int32')) # result of discriminator on generated image should be close to one
-            #gloss = F.sum(F.softplus(gn)) / batch_size
-            #losses[1].append(gloss.data)
-
-            dis.cleargrads()
-            dloss.backward()
-            d_optimizer.update()
-
-            gen.cleargrads()
-            gloss.backward()
-            g_optimizer.update()
-
-            gloss_epoch += gloss.data
-            dloss_epoch += dloss.data
-
-        # every epoch, append average loss per item
-        losses[0].append(dloss_epoch / 1000)
-        losses[1].append(gloss_epoch / 1000)
-
-
-        #     generator_epoch_loss += generator_loss.data
-        #     discriminator_epoch_loss += discriminator_loss.data
-        #
-        # generator_avg_loss = generator_epoch_loss / train_size
-        # discriminator_avg_loss = discriminator_epoch_loss / train_size
-
+                dloss_all +=gloss.data
+                gloss_all +=loss.data
+                j += 1
+            losses[0].append(dloss_all)
+            losses[1].append(gloss_all)
+            print(i)
     return losses
 
 def randomsample(batch_size):
@@ -93,12 +80,47 @@ def plot_loss(loss,epoch,batch_size):
     plt.show()
 
 def showImages(gen,batch_size):
-    batch_size = 1
+    f,axes = plt.subplots(2,5)
     noise = randomsample(batch_size)
-    images = gen(noise)
+    with chainer.using_config('train', False):
+        images = gen(noise)
+    for i in range(0,10):
+        if(i % 2 == 0):
+            x = 0
+        else:
+            x = 1
+        y = int(round(i/2,0))
+        axes[x][y].imshow(np.reshape(images[i].data[:,], (28, 28), order='F'))
+    plt.show()
+
+def showtrain(train):
+    f,axes = plt.subplots(2,5)
+    for i in range(0,10):
+        if (i % 2 == 0):
+            x = 0
+        else:
+            x = 1
+        y = int(round(i / 2, 0))
+        image = train[i]
+        axes[x][y].imshow(np.reshape(image, (28, 28), order='F'))
+    plt.show()
+
+def getCats():
+    images = []
+    for image_path in glob.glob("/home/jelmer/Github/CCN_Project/cropped_catfaces/*.jpg"):
+        image = misc.imread(image_path)
+        images.append(image)
+        #print image.shape
+    return images
+
+def grayscale(images):
+    output = []
     for i in images:
-        plt.imshow(np.reshape(i.data[:,], (28, 28), order='F'))
-        plt.show()
+        r, g, b = i[:, :, 0], i[:, :, 1], i[:, :, 2]
+        gray = np.float32(0.2989) * r + np.float32(0.5870) * g + np.float32(0.1140) * b
+        gray2 = [float(item) for sublist in gray for item in sublist]
+        output.append(gray2)
+    return output
 
 if(__name__ == "__main__"):
     main()
