@@ -15,17 +15,19 @@ from ANN import *
 from utils import *
 
 def main():
-    epoch = 20
+    epoch = 40
+    data_size = 6000
     #train_data, test_data = get_mnist(n_train=1000,n_test=100,with_label=False,classes=[0])
     cats = getCats()
     cats = grayscale(cats)
-    data = np.asarray(cats[0:1000])
-    train_data = chainer.datasets.TupleDataset(data,np.asarray(range(0,1000)))
+    data = np.asarray(cats[0:data_size])
+    train_data = chainer.datasets.TupleDataset(data,np.asarray(range(0,data_size)))
     #showtrain(train_data)
     #test_data = cats[1000:1100]
     batch_size = 32
-    gen = Generator()
-    dis = Discriminator()
+    n_units = 10
+    gen = LilGenerator(n_units)
+    dis = LilDiscriminator(n_units)
     iterator = RandomIterator(train_data,batch_size) #iterators.SerialIterator(train_data, batch_size=batch_size)
     g_optimizer = optimizers.Adam()
     g_optimizer.setup(gen)
@@ -49,16 +51,17 @@ def run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer):
                 noise = randomsample(batch_size)
                 g_sample = gen(noise)
                 disc_gen = dis(g_sample)
-                print(len(batch))
-                print(len(batch[0]))
-                disc_data = dis(np.reshape(batch, (batch_size, 1, 28, 28), order='F'))
-                softmax1 = F.sigmoid_cross_entropy(disc_gen,np.zeros((batch_size,1)).astype('int32'))
-                softmax2 = F.sigmoid_cross_entropy(disc_data,np.ones((batch_size,1)).astype('int32'))
+                input = np.reshape(batch[0], (batch_size, 1, 28, 28), order='F')
+                input = input.astype('float32')
+                disc_data = dis(input)
+
+                softmax1 = F.sigmoid_cross_entropy(disc_gen,np.zeros((batch_size,)).astype('int32'))
+                softmax2 = F.sigmoid_cross_entropy(disc_data,np.ones((batch_size,)).astype('int32'))
                 loss = softmax1 + softmax2
                 loss.backward()
                 d_optimizer.update()
 
-                gloss = F.sigmoid_cross_entropy(disc_gen,np.ones((batch_size,1)).astype('int32'))
+                gloss = F.sigmoid_cross_entropy(disc_gen,np.ones((batch_size,)).astype('int32'))
                 gloss.backward()
                 g_optimizer.update()
 
@@ -67,7 +70,7 @@ def run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer):
                 j += 1
             losses[0].append(dloss_all)
             losses[1].append(gloss_all)
-            print(i)
+            print('Epoch ' + str(i) + ' finished')
     return losses
 
 def randomsample(batch_size):
