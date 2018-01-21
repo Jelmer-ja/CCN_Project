@@ -3,6 +3,7 @@ import chainer
 from chainer import cuda, Function, gradient_check, report, training, utils, Variable
 from chainer import datasets, iterators, optimizers, serializers, training
 from chainer import Link, Chain, ChainList
+from multiprocessing.dummy import Pool
 from chainer.training import extensions
 import chainer.functions as F
 import chainer.links as L
@@ -15,7 +16,7 @@ from ANN import *
 from utils import *
 
 def main():
-    epoch = 40
+    epoch = 50
     data_size = 6000
     #train_data, test_data = get_mnist(n_train=1000,n_test=100,with_label=False,classes=[0])
     cats = getCats()
@@ -25,15 +26,19 @@ def main():
     #showtrain(train_data)
     #test_data = cats[1000:1100]
     batch_size = 32
-    n_units = 10
-    gen = LilGenerator(n_units)
-    dis = LilDiscriminator(n_units)
+    n_units = 10 #Alter in
+    gen = TestGenerator()
+    dis = TestDiscriminator()
     iterator = RandomIterator(train_data,batch_size) #iterators.SerialIterator(train_data, batch_size=batch_size)
     g_optimizer = optimizers.Adam()
     g_optimizer.setup(gen)
     d_optimizer = optimizers.Adam()
     d_optimizer.setup(dis)
-    loss = run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer)
+
+    #Run the networks
+    #pool = Pool(processes=8)
+    loss = run_network(epoch, batch_size, gen, dis, iterator, g_optimizer, d_optimizer)
+    #pool.close()
     showImages(gen,batch_size)
     plot_loss(loss,epoch,batch_size)
 
@@ -44,9 +49,7 @@ def run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer):
         dloss_all = 0
         gloss_all = 0
         with chainer.using_config('train', True):
-            j = 0
             for batch in iterator:
-                print j
                 dis.cleargrads(); gen.cleargrads()
                 noise = randomsample(batch_size)
                 g_sample = gen(noise)
@@ -67,7 +70,6 @@ def run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer):
 
                 dloss_all +=gloss.data
                 gloss_all +=loss.data
-                j += 1
             losses[0].append(dloss_all)
             losses[1].append(gloss_all)
             print('Epoch ' + str(i) + ' finished')
