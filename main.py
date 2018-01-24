@@ -16,8 +16,9 @@ from ANN import *
 from utils import *
 
 def main():
-    epoch = 50
+    epoch = 10
     data_size = 6000
+    dim = 1 #Color images = 3
     #train_data, test_data = get_mnist(n_train=1000,n_test=100,with_label=False,classes=[0])
     cats = getCats()
     cats = grayscale(cats)
@@ -30,19 +31,20 @@ def main():
     gen = TestGenerator()
     dis = TestDiscriminator()
     iterator = RandomIterator(train_data,batch_size) #iterators.SerialIterator(train_data, batch_size=batch_size)
-    g_optimizer = optimizers.Adam()
+    g_optimizer = optimizers.Adam(0.005)
     g_optimizer.setup(gen)
-    d_optimizer = optimizers.Adam()
+    d_optimizer = optimizers.Adam(0.01)
     d_optimizer.setup(dis)
 
     #Run the networks
     #pool = Pool(processes=8)
-    loss = run_network(epoch, batch_size, gen, dis, iterator, g_optimizer, d_optimizer)
+    #showTrain(train_data)
+    loss = run_network(epoch, batch_size, gen, dis, iterator, g_optimizer, d_optimizer, dim)
     #pool.close()
     showImages(gen,batch_size)
     plot_loss(loss,epoch,batch_size)
 
-def run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer):
+def run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer, dim):
     losses = [[],[]]
     for i in range(0,epoch):
         #for j in range (0,batch_size) THEY USED K=1 IN THE PAPER SO SO DO WE
@@ -50,13 +52,15 @@ def run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer):
         gloss_all = 0
         with chainer.using_config('train', True):
             for batch in iterator:
-                dis.cleargrads(); gen.cleargrads()
+                dis.cleargrads();
+                gen.cleargrads()
                 noise = randomsample(batch_size)
                 g_sample = gen(noise)
                 disc_gen = dis(g_sample)
                 input = np.reshape(batch[0], (batch_size, 1, 28, 28), order='F')
                 input = input.astype('float32')
                 disc_data = dis(input)
+
 
                 softmax1 = F.sigmoid_cross_entropy(disc_gen,np.zeros((batch_size,)).astype('int32'))
                 softmax2 = F.sigmoid_cross_entropy(disc_data,np.ones((batch_size,)).astype('int32'))
@@ -98,7 +102,7 @@ def showImages(gen,batch_size):
         axes[x][y].imshow(np.reshape(images[i].data[:,], (28, 28), order='F'))
     plt.show()
 
-def showtrain(train):
+def showTrain(train,dim):
     f,axes = plt.subplots(2,5)
     for i in range(0,10):
         if (i % 2 == 0):
@@ -107,7 +111,7 @@ def showtrain(train):
             x = 1
         y = int(round(i / 2, 0))
         image = train[i]
-        axes[x][y].imshow(np.reshape(image, (28, 28), order='F'))
+        axes[x][y].imshow(image[0])
     plt.show()
 
 def getCats():

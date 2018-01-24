@@ -102,6 +102,39 @@ class LilDiscriminator(Discriminator):
         y = F.squeeze(self.l3(h2))
         return y
 
+class LilColorGenerator(Generator):
+    def __init__(self):
+        super(Generator, self).__init__()
+        self.mnist_dim = 28
+        self.n_units = 10
+        with self.init_scope():
+            # the size of the inputs to each layer will be inferred
+            self.l1 = L.Linear(self.n_units * 3 * self.mnist_dim ** 2)  # n_in -> n_units        INPUT LAYER
+            self.l2 = L.BatchNormalization((self.n_units,3,self.mnist_dim,self.mnist_dim)) # n_units -> n_out       BATCH NORMALIZATION
+            self.l3 = L.Deconvolution2D(in_channels=self.n_units, out_channels=1, ksize=3, stride=1, pad=1,
+                                        outsize=(28, 28))  #  DECONVOLUTION
+
+    def __call__(self, x):
+        h1 = self.l1(x)
+        hx = np.reshape(h1,[-1,self.n_units,28,28], order='F').astype('float32')
+        h2 = F.relu(self.l2(hx))
+        y = F.sigmoid(self.l3(h2))
+        return y
+
+class LilColorDiscriminator(Discriminator):
+    def __init__(self):
+        super(Discriminator, self).__init__()
+        self.n_units = 10
+        with self.init_scope():
+            # the size of the inputs to each layer will be inferred
+            self.l2 = L.Convolution2D(in_channels=None, out_channels=self.n_units,ksize=3,stride=1)  # n_units -> n_units  CONVOLUTIONAL LAYER
+            self.l3 = L.Linear(None, 1)    # n_units -> n_out
+
+    def __call__(self, x):
+        h2 = F.relu(self.l2(x))
+        y = F.squeeze(self.l3(h2))
+        return y
+
 class TestGenerator(Generator):
     def __init__(self):
         super(Generator, self).__init__()
@@ -109,22 +142,28 @@ class TestGenerator(Generator):
         self.n_units = 10
         with self.init_scope():
             # the size of the inputs to each layer will be inferred
-            self.l1 = L.Linear(self.n_units * self.mnist_dim **2)  # n_in -> n_units        INPUT LAYER
-            self.l2 = L.BatchNormalization(self.n_units * self.mnist_dim ** 2)    # n_units -> n_out       BATCH NORMALIZATION
-            self.l3 = L.Deconvolution2D(in_channels=self.n_units, out_channels=10, ksize=3, stride=1,pad=1, outsize=(28,28))
-            self.l4 = L.BatchNormalization(self.n_units * self.mnist_dim ** 2)  # n_units -> n_out       BATCH NORMALIZATION
-            self.l5 = L.Deconvolution2D(in_channels=self.n_units, out_channels=1, ksize=3, stride=1, pad=1, outsize=(28,28))
+            self.l1 = L.Linear(self.n_units * 4 ** 2)  # n_in -> n_units        INPUT LAYER
+            self.l2 = L.BatchNormalization(self.n_units * 4 ** 2)    # n_units -> n_out       BATCH NORMALIZATION
+            self.l3 = L.Deconvolution2D(in_channels=self.n_units, out_channels=10, ksize=2, stride=2,pad=1, outsize=(7,7))
+            self.l4 = L.BatchNormalization(self.n_units * (self.mnist_dim/4) ** 2)  # n_units -> n_out       BATCH NORMALIZATION
+            self.l5 = L.Deconvolution2D(in_channels=self.n_units, out_channels=10, ksize=4, stride=2, pad=1, outsize=(14,14))
+            self.l6 = L.BatchNormalization(self.n_units * (self.mnist_dim / 2) ** 2)
+            self.l7 = L.Deconvolution2D(in_channels=self.n_units, out_channels=1, ksize=3, stride=2,pad=1,outsize=(28,28))
             #  DECONVOLUTION
 
     def __call__(self, x):
         h1 = self.l1(x)
         h2 = F.relu(self.l2(h1))
-        hx = F.reshape(h2, [-1,self.n_units,self.mnist_dim,self.mnist_dim])
+        hx = F.reshape(h2, [-1,self.n_units,4,4])
         hx2 = self.l3(hx)
-        hx3 = F.reshape(hx2, [32,7840])
+        hx3 = F.reshape(hx2, [32,490])
         h3 = F.relu(self.l4(hx3))
-        h = F.reshape(h3, [-1,self.n_units,self.mnist_dim,self.mnist_dim])
-        y = F.sigmoid(self.l5(h))
+        h4 = F.reshape(h3, [-1,self.n_units,7,7])
+        h5 = self.l5(h4)
+        h5x = F.reshape(h5,[32,1960])
+        h6 = F.relu(h5x)
+        h6x = F.reshape(h6,[-1,self.n_units,14,14])
+        y = F.sigmoid(self.l7(h6x))
         return y
 
 class TestDiscriminator(Discriminator):
@@ -138,6 +177,8 @@ class TestDiscriminator(Discriminator):
             self.l3 = L.BatchNormalization(self.n_units * 26 ** 2)
             self.l4 = L.Convolution2D(in_channels=None, out_channels=self.n_units,ksize=4,stride=2)
             self.l5 = L.BatchNormalization(self.n_units * 12 ** 2)
+            self.lx = L.Convolution2D(in_channels=None, out_channels=self.n_units,ksize=2,stride=2)
+            self.ly = L.BatchNormalization(self.n_units * 6 ** 2)
             self.l6 = L.Linear(None, 1)    # n_units -> n_out
 
     def __call__(self, x):
