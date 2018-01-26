@@ -1,6 +1,8 @@
 import chainer.functions as F
 import numpy as np
 import chainer.links as L
+from scipy import misc
+import glob
 from chainer import Link, Chain, ChainList, report
 
 class Generator(Chain):
@@ -144,9 +146,9 @@ class TestGenerator(Generator):
             # the size of the inputs to each layer will be inferred
             self.l1 = L.Linear(self.n_units * 4 ** 2)  # n_in -> n_units        INPUT LAYER
             self.l2 = L.BatchNormalization(self.n_units * 4 ** 2)    # n_units -> n_out       BATCH NORMALIZATION
-            self.l3 = L.Deconvolution2D(in_channels=self.n_units, out_channels=10, ksize=2, stride=2,pad=1, outsize=(7,7))
+            self.l3 = L.Deconvolution2D(in_channels=self.n_units, out_channels=self.n_units, ksize=2, stride=2,pad=1, outsize=(7,7))
             self.l4 = L.BatchNormalization(self.n_units * (self.mnist_dim/4) ** 2)  # n_units -> n_out       BATCH NORMALIZATION
-            self.l5 = L.Deconvolution2D(in_channels=self.n_units, out_channels=10, ksize=4, stride=2, pad=1, outsize=(14,14))
+            self.l5 = L.Deconvolution2D(in_channels=self.n_units, out_channels=self.n_units, ksize=4, stride=2, pad=1, outsize=(14,14))
             self.l6 = L.BatchNormalization(self.n_units * (self.mnist_dim / 2) ** 2)
             self.l7 = L.Deconvolution2D(in_channels=self.n_units, out_channels=1, ksize=3, stride=2,pad=1,outsize=(28,28))
             #  DECONVOLUTION
@@ -156,11 +158,11 @@ class TestGenerator(Generator):
         h2 = F.relu(self.l2(h1))
         hx = F.reshape(h2, [-1,self.n_units,4,4])
         hx2 = self.l3(hx)
-        hx3 = F.reshape(hx2, [32,490])
+        hx3 = F.reshape(hx2, [32,self.n_units * 7 ** 2])
         h3 = F.relu(self.l4(hx3))
         h4 = F.reshape(h3, [-1,self.n_units,7,7])
         h5 = self.l5(h4)
-        h5x = F.reshape(h5,[32,1960])
+        h5x = F.reshape(h5,[32,self.n_units * 14 ** 2])
         h6 = F.relu(h5x)
         h6x = F.reshape(h6,[-1,self.n_units,14,14])
         y = F.sigmoid(self.l7(h6x))
@@ -169,7 +171,7 @@ class TestGenerator(Generator):
 class TestDiscriminator(Discriminator):
     def __init__(self):
         super(Discriminator, self).__init__()
-        self.n_units = 10
+        self.n_units = 15
         self.mnist_dim = 28
         with self.init_scope():
             # the size of the inputs to each layer will be inferred
@@ -177,16 +179,43 @@ class TestDiscriminator(Discriminator):
             self.l3 = L.BatchNormalization(self.n_units * 26 ** 2)
             self.l4 = L.Convolution2D(in_channels=None, out_channels=self.n_units,ksize=4,stride=2)
             self.l5 = L.BatchNormalization(self.n_units * 12 ** 2)
-            self.lx = L.Convolution2D(in_channels=None, out_channels=self.n_units,ksize=2,stride=2)
-            self.ly = L.BatchNormalization(self.n_units * 6 ** 2)
-            self.l6 = L.Linear(None, 1)    # n_units -> n_out
+            self.l6 = L.Convolution2D(in_channels=None, out_channels=self.n_units,ksize=2,stride=2)
+            self.l7 = L.BatchNormalization(self.n_units * 6 ** 2)
+            self.l8 = L.Linear(None, 1)    # n_units -> n_out
 
     def __call__(self, x):
-        h1 = F.reshape(self.l2(x),[32,6760])
+        h1 = F.reshape(self.l2(x),[32,self.n_units *26 ** 2])
         h2 = F.relu(self.l3(h1))
         h3 = F.reshape(h2,[-1,self.n_units,26,26])
         h4 = self.l4(h3)
-        h5 = F.reshape(h4, [32,1440])
+        h5 = F.reshape(h4, [32,self.n_units * 12 ** 2])
         h6 = F.relu(self.l5(h5))
-        y = F.squeeze(self.l6(h6))
+        h6x = F.reshape(h6,[-1,self.n_units,12,12])
+        h7 = self.l6(h6x)
+        h7x = F.reshape(h7,[32,self.n_units * 6 ** 2])
+        h8 = F.relu(self.l7(h7x))
+        y = F.squeeze(self.l8(h8))
         return y
+
+"""
+class HighResGenerator(Generator):
+    def __init__(self):
+        super(Generator, self).__init__()
+        self.mnist_dim = 28
+        self.n_units = 10
+        with self.init_scope():
+"""
+
+class Indices():
+    def __init__(self):
+        self.url = '/home/jelmer/Github/CCN_Project/catfaces/'
+
+    def getIndices(self):
+        indices = []
+        for image_path in glob.glob("/home/jelmer/Github/CCN_Project/catfaces/*.jpg"):
+            image = misc.imread(image_path)
+            width, heigth, dummy = np.shape(image)
+            tokens = image_path.split('/')
+            if (width == 48 and heigth == 48):
+                indices.append(tokens[-1])
+        return indices

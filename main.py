@@ -16,7 +16,8 @@ from ANN import *
 from utils import *
 
 def main():
-    epoch = 10
+    #SET PARAMETERS
+    epoch = 20
     data_size = 6000
     dim = 1 #Color images = 3
     #train_data, test_data = get_mnist(n_train=1000,n_test=100,with_label=False,classes=[0])
@@ -25,22 +26,19 @@ def main():
     data = np.asarray(cats[0:data_size])
     train_data = chainer.datasets.TupleDataset(data,np.asarray(range(0,data_size)))
     #showtrain(train_data)
-    #test_data = cats[1000:1100]
     batch_size = 32
-    n_units = 10 #Alter in
+
+    #CREATE CLASSES
     gen = TestGenerator()
     dis = TestDiscriminator()
     iterator = RandomIterator(train_data,batch_size) #iterators.SerialIterator(train_data, batch_size=batch_size)
-    g_optimizer = optimizers.Adam(0.005)
+    g_optimizer = optimizers.Adam()
     g_optimizer.setup(gen)
-    d_optimizer = optimizers.Adam(0.01)
+    d_optimizer = optimizers.Adam()
     d_optimizer.setup(dis)
 
-    #Run the networks
-    #pool = Pool(processes=8)
-    #showTrain(train_data)
+    #RUN NETWORKS
     loss = run_network(epoch, batch_size, gen, dis, iterator, g_optimizer, d_optimizer, dim)
-    #pool.close()
     showImages(gen,batch_size)
     plot_loss(loss,epoch,batch_size)
 
