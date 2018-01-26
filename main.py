@@ -17,12 +17,12 @@ from utils import *
 
 def main():
     #SET PARAMETERS
-    epoch = 20
-    data_size = 6000
+    epoch = 40
+    data_size = 2000
     dim = 1 #Color images = 3
     #train_data, test_data = get_mnist(n_train=1000,n_test=100,with_label=False,classes=[0])
     cats = getCats()
-    cats = grayscale(cats)
+    #cats = grayscale(cats)
     data = np.asarray(cats[0:data_size])
     train_data = chainer.datasets.TupleDataset(data,np.asarray(range(0,data_size)))
     #showtrain(train_data)
@@ -52,12 +52,12 @@ def run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer, dim):
             for batch in iterator:
                 dis.cleargrads();
                 gen.cleargrads()
+                input = np.reshape(batch[0], (batch_size, 3, 28, 28), order='F')
+                input = input.astype('float32')
+                disc_data = dis(input)
                 noise = randomsample(batch_size)
                 g_sample = gen(noise)
                 disc_gen = dis(g_sample)
-                input = np.reshape(batch[0], (batch_size, 1, 28, 28), order='F')
-                input = input.astype('float32')
-                disc_data = dis(input)
 
 
                 softmax1 = F.sigmoid_cross_entropy(disc_gen,np.zeros((batch_size,)).astype('int32'))
@@ -78,7 +78,7 @@ def run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer, dim):
     return losses
 
 def randomsample(batch_size):
-    return np.random.uniform(-1, 1, (batch_size, 100, 1, 1)).astype(np.float32)
+    return np.random.uniform(-1, 1, (batch_size, 160, 1, 1)).astype(np.float32)
 
 def plot_loss(loss,epoch,batch_size):
     plt.plot(np.array(range(0, epoch)), np.array(loss[0]), label='Discriminator Loss')
@@ -97,7 +97,7 @@ def showImages(gen,batch_size):
         else:
             x = 1
         y = int(round(i/2,0))
-        axes[x][y].imshow(np.reshape(images[i].data[:,], (28, 28), order='F'))
+        axes[x][y].imshow(np.reshape(images[i].data[:,], (28, 28, 3), order='F'))
     plt.show()
 
 def showTrain(train,dim):
