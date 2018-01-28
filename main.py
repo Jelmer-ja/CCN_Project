@@ -25,7 +25,7 @@ def main():
     #cats = grayscale(cats)
     data = np.asarray(cats[0:data_size])
     train_data = chainer.datasets.TupleDataset(data,np.asarray(range(0,data_size)))
-    #showtrain(train_data)
+    #showTrain(train_data)
     batch_size = 32
 
     #CREATE CLASSES
@@ -100,7 +100,7 @@ def showImages(gen,batch_size):
         axes[x][y].imshow(np.reshape(images[i].data[:,], (28, 28, 3), order='F'))
     plt.show()
 
-def showTrain(train,dim):
+def showTrain(train):
     f,axes = plt.subplots(2,5)
     for i in range(0,10):
         if (i % 2 == 0):

@@ -141,30 +141,25 @@ class TestGenerator(Generator):
     def __init__(self):
         super(Generator, self).__init__()
         self.mnist_dim = 28
-        self.n_units = 10
+        self.n_units = 512
         with self.init_scope():
             # the size of the inputs to each layer will be inferred
-            self.l1 = L.Linear(124 * 4 ** 2)  # n_in -> n_units        INPUT LAYER
-            self.l2 = L.BatchNormalization((124,4,4) )   # n_units -> n_out       BATCH NORMALIZATION
-            self.l3 = L.Deconvolution2D(in_channels=124, out_channels=64, ksize=2, stride=2,pad=1, outsize=(7,7))
-            self.l4 = L.BatchNormalization((64,7,7))  # n_units -> n_out       BATCH NORMALIZATION
-            self.l5 = L.Deconvolution2D(in_channels=64, out_channels=32, ksize=4, stride=2, pad=1, outsize=(14,14))
-            self.l6 = L.BatchNormalization((32,14,14))
-            self.l7 = L.Deconvolution2D(in_channels=32, out_channels=3, ksize=3, stride=2,pad=1,outsize=(28,28))
+            self.l1 = L.Linear(self.n_units * 4 ** 2)  # n_in -> n_units        INPUT LAYER
+            self.l2 = L.BatchNormalization((self.n_units,4,4) )   # n_units -> n_out       BATCH NORMALIZATION
+            self.l3 = L.Deconvolution2D(in_channels=self.n_units, out_channels=self.n_units / 2, ksize=2, stride=2,pad=1, outsize=(7,7))
+            self.l4 = L.BatchNormalization((self.n_units / 2,7,7))  # n_units -> n_out       BATCH NORMALIZATION
+            self.l5 = L.Deconvolution2D(in_channels=self.n_units / 2, out_channels=self.n_units / 4, ksize=4, stride=2, pad=1, outsize=(14,14))
+            self.l6 = L.BatchNormalization((self.n_units / 4,14,14))
+            self.l7 = L.Deconvolution2D(in_channels=self.n_units / 4, out_channels=3, ksize=3, stride=2,pad=1,outsize=(28,28))
             #  DECONVOLUTION
 
     def __call__(self, x):
-        h1 = F.reshape(self.l1(x),[32,124,4,4])
+        h1 = F.reshape(self.l1(x),[32,self.n_units,4,4])
         h2 = F.relu(self.l2(h1))
-        #hx = F.reshape(h2, [32,self.n_units,4,4])
         hx2 = self.l3(h2)
-        #hx3 = F.reshape(hx2, [32,self.n_units * 7 ** 2])
         h3 = F.relu(self.l4(hx2))
-        #h4 = F.reshape(h3, [-1,self.n_units,7,7])
         h5 = self.l5(h3)
-        #h5x = F.reshape(h5,[32,self.n_units * 14 ** 2])
         h6 = F.relu(h5)
-        #h6x = F.reshape(h6,[-1,self.n_units,14,14])
         y = F.sigmoid(self.l7(h6))
         return y
 
@@ -172,28 +167,23 @@ class TestDiscriminator(Discriminator):
     def __init__(self):
         super(Discriminator, self).__init__()
         self.n_units = 15
-        self.mnist_dim = 28
+        self.mnist_dim = 256
         with self.init_scope():
             # the size of the inputs to each layer will be inferred
-            self.l2 = L.Convolution2D(in_channels=None, out_channels=64,ksize=3,stride=1)  # n_units -> n_units  CONVOLUTIONAL LAYER
-            self.l3 = L.BatchNormalization((64,26,26))
-            self.l4 = L.Convolution2D(in_channels=64, out_channels=32,ksize=4,stride=2)
-            self.l5 = L.BatchNormalization((32,12,12))
-            self.l6 = L.Convolution2D(in_channels=32, out_channels=16,ksize=2,stride=2)
-            self.l7 = L.BatchNormalization((16,6,6))
-            self.l8 = L.Linear(576, 1)    # n_units -> n_out
+            self.l2 = L.Convolution2D(in_channels=None, out_channels=self.n_units / 4,ksize=3,stride=1)  # n_units -> n_units  CONVOLUTIONAL LAYER
+            self.l3 = L.BatchNormalization((self.n_units / 4,26,26))
+            self.l4 = L.Convolution2D(in_channels=self.n_units / 4, out_channels=self.n_units / 2,ksize=4,stride=2)
+            self.l5 = L.BatchNormalization((self.n_units / 2,12,12))
+            self.l6 = L.Convolution2D(in_channels=self.n_units / 2, out_channels=self.n_units,ksize=2,stride=2)
+            self.l7 = L.BatchNormalization((self.n_units,6,6))
+            self.l8 = L.Linear(self.n_units * 6 ** 2, 1)    # n_units -> n_out
 
     def __call__(self, x):
-        #h1 = F.reshape(self.l2(x),[32,self.n_units * 3 * 26 ** 2])
         h1 = self.l2(x)
         h2 = F.relu(self.l3(h1))
-        #h3 = F.reshape(h2,[-1,self.n_units,3,26,26])
         h4 = self.l4(h2)
-        #h5 = F.reshape(h4, [32,self.n_units * 3 * 12 ** 2])
         h6 = F.relu(self.l5(h4))
-        #h6x = F.reshape(h6,[-1,self.n_units,3,12,12])
         h7 = self.l6(h6)
-        #h7x = F.reshape(h7,[32,self.n_units * 3 * 6 ** 2])
         h8 = F.relu(self.l7(h7))
         y = F.squeeze(self.l8(h8))
         return y
