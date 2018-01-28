@@ -17,8 +17,8 @@ from utils import *
 
 def main():
     #SET PARAMETERS
-    epoch = 40
-    data_size = 2000
+    epoch = 30
+    data_size = 6000
     dim = 1 #Color images = 3
     #train_data, test_data = get_mnist(n_train=1000,n_test=100,with_label=False,classes=[0])
     cats = getCats()
@@ -48,8 +48,10 @@ def run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer, dim):
         #for j in range (0,batch_size) THEY USED K=1 IN THE PAPER SO SO DO WE
         dloss_all = 0
         gloss_all = 0
+        j = 0
         with chainer.using_config('train', True):
             for batch in iterator:
+                print j
                 dis.cleargrads();
                 gen.cleargrads()
                 input = np.reshape(batch[0], (batch_size, 3, 28, 28), order='F')
@@ -72,6 +74,7 @@ def run_network(epoch,batch_size,gen,dis,iterator,g_optimizer,d_optimizer, dim):
 
                 dloss_all +=gloss.data
                 gloss_all +=loss.data
+                j = j + 1
             losses[0].append(dloss_all)
             losses[1].append(gloss_all)
             print('Epoch ' + str(i) + ' finished')
