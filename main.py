@@ -17,7 +17,7 @@ from utils import *
 
 def main():
     #SET PARAMETERS
-    epoch = 200
+    epoch = 100
     data_size = 6000
     feature_matching = True #Color images = 3
     #train_data, test_data = get_mnist(n_train=1000,n_test=100,with_label=False,classes=[0])
@@ -125,7 +125,7 @@ def showTrain(train):
 
 def getCats():
     images = []
-    for image_path in glob.glob("/home/jelmer/Github/CCN_Project/cropped_catfaces/*.jpg"):
+    for image_path in glob.glob("cropped_catfaces/*.jpg"):
         image = misc.imread(image_path)
         images.append(image)
         #print image.shape
