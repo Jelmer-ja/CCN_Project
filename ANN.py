@@ -108,17 +108,20 @@ class LilDiscriminator(Discriminator):
 class TestGenerator(Generator):
     def __init__(self):
         super(Generator, self).__init__()
-        self.n_units = 32
+        self.n_units = 128
         self.mnist_dim = 28
+        self.tr = 2
+        s = [4,7,14,28] #[4,6,10,28]
+        self.s = s
         with self.init_scope():
             # the size of the inputs to each layer will be inferred
-            self.l1 = L.Linear(self.n_units * 4 ** 2)  # n_in -> n_units        INPUT LAYER
-            self.l2 = L.BatchNormalization((self.n_units,4,4) )   # n_units -> n_out       BATCH NORMALIZATION
-            self.l3 = L.Deconvolution2D(in_channels=self.n_units, out_channels=self.n_units, ksize=2, stride=2,pad=1, outsize=(7,7))
-            self.l4 = L.BatchNormalization((self.n_units,7,7))  # n_units -> n_out       BATCH NORMALIZATION
-            self.l5 = L.Deconvolution2D(in_channels=self.n_units, out_channels=self.n_units, ksize=4, stride=2, pad=1, outsize=(14,14))
-            self.l6 = L.BatchNormalization((self.n_units,14,14))
-            self.l7 = L.Deconvolution2D(in_channels=self.n_units, out_channels=3, ksize=3, stride=2,pad=1,outsize=(28,28))
+            self.l1 = L.Linear(self.n_units * s[0] ** 2)  # n_in -> n_units        INPUT LAYER
+            self.l2 = L.BatchNormalization((self.n_units,s[0],s[0]))   # n_units -> n_out       BATCH NORMALIZATION
+            self.l3 = L.Deconvolution2D(in_channels=self.n_units, out_channels=self.n_units / self.tr, ksize=3, stride=2,pad=1, outsize=(s[1],s[1]))
+            self.l4 = L.BatchNormalization((self.n_units / self.tr,s[1],s[1]))  # n_units -> n_out       BATCH NORMALIZATION
+            self.l5 = L.Deconvolution2D(in_channels=self.n_units/self.tr, out_channels=self.n_units/(self.tr ** 2), ksize=4, stride=2, pad=1, outsize=(s[2],s[2]))
+            self.l6 = L.BatchNormalization((self.n_units / (self.tr**2),s[2],s[2]))
+            self.l7 = L.Deconvolution2D(in_channels=self.n_units / (self.tr**2), out_channels=3, ksize=4, stride=2,pad=1,outsize=(28,28))
             #  DECONVOLUTION
 
     def __call__(self, x):
@@ -131,23 +134,37 @@ class TestGenerator(Generator):
         y = F.sigmoid(self.l7(h6))
         return y
 
+    def activation_call(self,x):
+        h1 = F.reshape(self.l1(x), [32, self.n_units, 4, 4])
+        h2 = F.relu(self.l2(h1))
+        hx2 = self.l3(h2)
+        h3 = F.relu(self.l4(hx2))
+        h5 = self.l5(h3)
+        h6 = F.relu(h5)
+        y = F.sigmoid(self.l7(h6))
+        return h6, y
+
 class TestDiscriminator(Discriminator):
-    def __init__(self):
+    def __init__(self, batchDisc):
         super(Discriminator, self).__init__()
-        self.n_units = 32
+        self.n_units = 128
         self.mnist_dim = 28
+        self.batchdisc = batchDisc
+        self.tr = 2
         self.B = 36
         self.C = self.n_units
+        s = [28,14,7,4] #[28,10,4,2] #[28,26,12,6]
         with self.init_scope():
             # the size of the inputs to each layer will be inferred
-            self.l2 = L.Convolution2D(in_channels=None, out_channels=self.n_units,ksize=3,stride=1)  # n_units -> n_units  CONVOLUTIONAL LAYER
-            self.l3 = L.BatchNormalization((self.n_units,26,26))
-            self.l4 = L.Convolution2D(in_channels=self.n_units, out_channels=self.n_units,ksize=4,stride=2)
-            self.l5 = L.BatchNormalization((self.n_units,12,12))
-            self.l6 = L.Convolution2D(in_channels=self.n_units, out_channels=self.n_units,ksize=2,stride=2)
-            self.l7 = L.BatchNormalization((self.n_units,6,6))
-            self.md = L.Linear(6 * 6 * self.n_units, self.B * self.C)
-            self.ex = L.Linear(self.n_units * 6 ** 2 + self.B, 1)    # n_units -> n_out
+            self.l2 = L.Convolution2D(in_channels=None, out_channels=self.n_units / (self.tr ** 2),ksize=4,stride=2,pad=1)  # n_units -> n_units  CONVOLUTIONAL LAYER
+            self.l3 = L.BatchNormalization((self.n_units/(self.tr**2),s[1],s[1]))
+            self.l4 = L.Convolution2D(in_channels=self.n_units/(self.tr**2), out_channels=self.n_units/self.tr,ksize=4,stride=2,pad=1)
+            self.l5 = L.BatchNormalization((self.n_units/self.tr,s[2],s[2]))
+            self.l6 = L.Convolution2D(in_channels=self.n_units/self.tr, out_channels=self.n_units,ksize=3,stride=2,pad=1)
+            self.l7 = L.BatchNormalization((self.n_units,s[3],s[3]))
+            self.md = L.Linear((s[3] ** 2) * self.n_units, self.B * self.C)
+            self.ex = L.Linear(self.n_units * s[3] ** 2 + self.B, 1)    # n_units -> n_out
+            self.no = L.Linear(self.n_units * s[3] ** 2,1)
 
     def __call__(self, x):
         h1 = self.l2(x)
@@ -159,15 +176,28 @@ class TestDiscriminator(Discriminator):
 
         #Minibatch Discrimination
         #Source: https://github.com/pfnet-research/chainer-gan-lib/blob/master/minibatch_discrimination/net.py
-        feature = F.reshape(F.leaky_relu(h8), (32, self.n_units * 6 ** 2))
-        m = F.reshape(self.md(feature), (32, self.B * self.C, 1))
-        m0 = F.broadcast_to(m, (32, self.B * self.C, 32))
-        m1 = F.transpose(m0, (2, 1, 0))
-        d = F.absolute(F.reshape(m0 - m1, (32, self.B, self.C, 32)))
-        d = F.sum(F.exp(-F.sum(d, axis=2)), axis=2) - 1
-        h = F.concat([feature, d])
-        y = F.squeeze(self.ex(h))
+        if(self.batchdisc):
+            feature = F.reshape(F.leaky_relu(h8), (32, self.n_units * 2 ** 2))
+            m = F.reshape(self.md(feature), (32, self.B * self.C, 1))
+            m0 = F.broadcast_to(m, (32, self.B * self.C, 32))
+            m1 = F.transpose(m0, (2, 1, 0))
+            d = F.absolute(F.reshape(m0 - m1, (32, self.B, self.C, 32)))
+            d = F.sum(F.exp(-F.sum(d, axis=2)), axis=2) - 1
+            h = F.concat([feature, d])
+            y = F.squeeze(self.ex(h))
+        else:
+            y = F.squeeze(self.no(h8))
         return y
+
+    def activation_call(self,x):
+        h1 = self.l2(x)
+        h2 = F.relu(self.l3(h1))
+        h4 = self.l4(h2)
+        h6 = F.relu(self.l5(h4))
+        h7 = self.l6(h6)
+        h8 = F.relu(self.l7(h7))
+        y = F.squeeze(self.no(h8))
+        return h2, y
 
 """
 class MinibatchDiscrimination(Chain):
